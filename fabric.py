@@ -29,12 +29,15 @@ class FabricBlockDev(object):
 
     @staticmethod
     def os_type():
-        return set(platform.win32_ver()[0]) and OS_WIN or (
-                   set(platform.mac_ver()[0]) and OS_MAC or (
-                       set(platform.libc_ver()[0]) and OS_NIX or (
-                           set(platform.java_ver()[0]) and OS_JVA or
-                           None
-                       )))
+        if set(platform.win32_ver()[0]):
+            return OS_WIN
+        elif set(platform.mac_ver()[0]):
+            return OS_MAC
+        elif set(platform.libc_ver()[0]):
+            return OS_NIX
+        elif set(platform.java_ver()[0]):
+            return OS_JVA
+        return 'n/a'
 
     def build_object(self, args):
         if self.issued_object:
@@ -44,4 +47,15 @@ class FabricBlockDev(object):
             self.issued_object = obj_class(args)
             return self.issued_object
         else:
-            raise Exception('No implemented in this OS')
+            raise Exception('OS  not recognized')
+
+if __name__ == '__main__':
+    print("Test OS")
+    os_names={
+        OS_WIN: 'Windows',
+        OS_MAC:'OsX',
+        OS_NIX:'*nix',
+        OS_JVA:'Java Machine',
+        'n/a': 'Not recognized'
+        }
+    print(os_names[FabricBlockDev().os_type()])

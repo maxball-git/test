@@ -9,5 +9,6 @@ def create_parser():
 
 if __name__ == '__main__':
     in_args = create_parser().parse_args()
+    #in_args.device = 1
     lb = FabricBlockDev().build_object(in_args)
     lb.execute()

@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 import subprocess
 import shlex
 import re
+import time
 
 
 class AbstractBLOCKDEV(object):
@@ -106,36 +107,45 @@ AbstractBLOCKDEV.register(NixDevices)
 class WinDevices(AbstractBLOCKDEV):
     @staticmethod
     def out_normalization(txt):
-        text = txt
-        text = text.strip().split('\n')
-        while not str(text[0]).startswith('-'):
+        text = txt.split('\n')
+        while not str(text[0]).strip().startswith('-'):
             text.__delitem__(0)
+        text = text[0:text.index(u'')]
         shift = len(text[0].partition('-')[0])
-        cols_widths = [len(x) for x in text[0].split(' ')]
-
+        cols_widths = [len(x) for x in text[0].split()]
+        sum_col = 0
+        cols = list()
+        for i, col in enumerate(cols_widths,0):
+            sum_col += shift
+            cols.append({'start': sum_col, 'end': sum_col+col})
+            sum_col += col
         text.__delitem__(0)
-        text = [{'name': s[shift * i: shift * i + cols_widths[i - 1]].strip(),
-                 'info': s[shift * i: shift * i + cols_widths[i - 1]].strip(),
-                 'size': s[shift * i: shift * i + cols_widths[i - 1]].strip(),
+        text = [{'name': s[cols[0]['start']: cols[0]['end']].strip(),
+                 'info': s[cols[1]['start']: cols[1]['end']].strip(),
+                 'size': s[cols[2]['start']: cols[2]['end']].strip(),
                  'index': i
                  }
-                for i, s in enumerate(text, start=1)]
+                for i, s in enumerate(text, start=1) if s]
         return text
 
     def get_devices(self):
         """get devices list"""
-        p = subprocess.Popen(["diskpart"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        txt = p.communicate(input=b'list disk')[0]
-        p.communicate(input=b'exit')
-        devices = self.out_normalization(txt)
+        p = subprocess.Popen(["diskpart"],
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT)
+        out = p.communicate(input=b'list disk\nexit')[0].decode()
+        devices = self.out_normalization(out)
         return devices
 
     def get_partitions(self, device):
         """get partition list"""
-        p = subprocess.Popen(["diskpart"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        p.communicate(input=b'select disk={}'.format(device['index']))
-        out = p.communicate(input=b'list partition')[0]
-        p.communicate(input=b'exit')
+        p = subprocess.Popen(["diskpart"],
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT)
+        s = b'select disk {}'.format(device['name'].split()[1].strip())
+        out = p.communicate(input=b'select disk 0\nlist partition\nexit')[0].decode()
         partitions = self.out_normalization(out)
         return partitions
 
